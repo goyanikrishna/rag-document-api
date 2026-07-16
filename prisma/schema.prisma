@@ -1,0 +1,36 @@
+datasource db {
+  provider   = "postgresql"
+  extensions = [pgvector(map: "vector")]
+}
+
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+model Document {
+  id           String          @id @default(uuid()) @db.Uuid
+  originalName String          @map("original_name")
+  filename     String          @unique
+  mimeType     String          @map("mime_type")
+  size         Int
+  uploadedAt   DateTime        @default(now()) @map("uploaded_at")
+  chunks       DocumentChunk[]
+
+  @@map("documents")
+}
+
+model DocumentChunk {
+  id          String                      @id @default(uuid()) @db.Uuid
+  documentId  String                      @map("document_id") @db.Uuid
+  chunkIndex  Int                         @map("chunk_index")
+  pageNumber  Int?                        @map("page_number")
+  content     String
+  embedding   Unsupported("vector(768)")?
+  document    Document                    @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, chunkIndex])
+  @@index([documentId])
+  @@map("document_chunks")
+}
