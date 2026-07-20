@@ -1,4 +1,5 @@
 import express from 'express';
+import helmet from 'helmet';
 import documentRoutes from '@/modules/document/document.routes';
 import ragRoutes from '@/modules/rag/rag.routes';
 import { errorHandler } from '@/common/middlewares/error-handler';
@@ -7,6 +8,8 @@ import APIError from '@/common/errors/api-error';
 import httpStatus from 'http-status';
 
 const app = express();
+
+app.use(helmet());
 
 // 1. Middleware: Parse incoming JSON payloads
 app.use(express.json());
