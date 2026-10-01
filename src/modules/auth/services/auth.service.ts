@@ -10,6 +10,7 @@ import {
   IRegisterInput,
   ILoginInput,
   IAuthResponse,
+  IUserProfileResponse,
 } from '@/modules/auth/interfaces/auth.interface';
 
 function generateToken(userId: string, email: string): string {
@@ -85,7 +86,27 @@ async function login(input: ILoginInput): Promise<IAuthResponse> {
   };
 }
 
+async function getMe(userId: string): Promise<IUserProfileResponse> {
+  const user = await userRepository.findById(userId);
+  if (!user) {
+    throw new APIError(
+      ErrMessages.userNotFound,
+      httpStatus.NOT_FOUND as number,
+      true,
+      ErrorCodes.USER_NOT_FOUND,
+    );
+  }
+
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email,
+    created_at: user.createdAt,
+  };
+}
+
 export default {
   register,
   login,
+  getMe,
 };

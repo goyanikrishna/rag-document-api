@@ -22,3 +22,29 @@ export interface IQueryResponse {
     similarity: number;
   }[];
 }
+
+export interface IQueryHistoryItemResponse {
+  id: string;
+  user_id: string;
+  document_id: string | null;
+  document_name: string | null;
+  question: string;
+  answer: string;
+  created_at: Date;
+}
+
+export interface IQueryHistoryQueryParams {
+  document_id?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface IPaginatedQueryHistoryResponse {
+  history: IQueryHistoryItemResponse[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    total_pages: number;
+  };
+}

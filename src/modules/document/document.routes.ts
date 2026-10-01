@@ -36,6 +36,13 @@ router.get('/', validate(documentParams.getDocumentsQuery), documentController.g
 // GET /api/documents/:id - Get a single document (must belong to authenticated user)
 router.get('/:id', validate(documentParams.documentIdParam), documentController.getDocument);
 
+// GET /api/documents/:id/file - Stream or download the raw physical document file
+router.get(
+  '/:id/file',
+  validate(documentParams.documentIdParam),
+  documentController.getDocumentFile,
+);
+
 // DELETE /api/documents/:id - Delete a document (must belong to authenticated user)
 router.delete('/:id', validate(documentParams.documentIdParam), documentController.deleteDocument);
 

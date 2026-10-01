@@ -7,7 +7,7 @@ dotenv.config();
 
 const envSchema = Joi.object({
   NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
-  PORT: Joi.number().integer().default(3000),
+  PORT: Joi.number().integer().default(8000),
   DATABASE_URL: Joi.string().uri().required(),
   GEMINI_API_KEY: Joi.string().required(),
   GEMINI_MODEL: Joi.string().required(),

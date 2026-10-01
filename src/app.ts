@@ -60,8 +60,8 @@ const authLimiter = rateLimit({
 
 // 7. API Routes Registration
 app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/rag', ragRoutes);
 app.use('/api/documents', documentRoutes);
-app.use('/api/documents', ragRoutes);
 
 // 8. Fallback: Route Not Found (404)
 app.use((req, res, next) => {

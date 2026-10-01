@@ -32,7 +32,7 @@ import {
 async function uploadAndProcess(file: Express.Multer.File, userId: string): Promise<Document> {
   // 1. Resolve parser matching MIME type and parse content
   const fileBuffer = file.buffer || fs.readFileSync(file.path);
-  const parser = parserFactory.getParser(file.mimetype);
+  const parser = parserFactory.getParser(file.mimetype, file.originalname);
 
   // 2. Save Document metadata in PostgreSQL (status default: PENDING)
   let document = await documentRepository.create({
@@ -179,9 +179,37 @@ async function deleteDocument(id: string, userId: string): Promise<void> {
   logger.info(`Document ID ${id} deleted successfully by user ${userId}`);
 }
 
+/**
+ * Fetches the physical file details for downloading or streaming inline.
+ * Enforces ownership — throws 403 if the document does not belong to the requesting user.
+ */
+async function getDocumentFile(
+  id: string,
+  userId: string,
+): Promise<{ filePath: string; mimeType: string; originalName: string }> {
+  const document = await getDocumentById(id, userId);
+  const filePath = path.join(UPLOAD_DIR, document.filename);
+
+  if (!fs.existsSync(filePath)) {
+    throw new APIError(
+      ErrMessages.documentNotFound,
+      httpStatus.NOT_FOUND as number,
+      true,
+      ErrorCodes.DOCUMENT_NOT_FOUND,
+    );
+  }
+
+  return {
+    filePath,
+    mimeType: document.mimeType,
+    originalName: document.originalName,
+  };
+}
+
 export default {
   uploadAndProcess,
   getAllDocuments,
   getDocumentById,
+  getDocumentFile,
   deleteDocument,
 };

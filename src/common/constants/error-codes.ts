@@ -15,6 +15,8 @@ export const ErrorCodes = {
   INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
   /** Email is already registered */
   EMAIL_ALREADY_EXISTS: 'EMAIL_ALREADY_EXISTS',
+  /** User record not found */
+  USER_NOT_FOUND: 'USER_NOT_FOUND',
 
   // ─── Authorization ───────────────────────────────────────────────────────────
   /** Authenticated user does not own the requested resource */

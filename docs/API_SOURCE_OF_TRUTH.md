@@ -15,6 +15,7 @@ This document is the **single authoritative contract** for all endpoints in the 
 ## Standard Response Format
 
 ### Success Response Structure
+
 ```json
 {
   "success": true,
@@ -25,6 +26,7 @@ This document is the **single authoritative contract** for all endpoints in the 
 ```
 
 ### Error Response Structure
+
 ```json
 {
   "success": false,
@@ -50,19 +52,19 @@ Authorization: Bearer <your_jwt_token>
 
 ## Error Codes Catalog
 
-| Error Code | HTTP Status | Description |
-|---|---|---|
-| `VALIDATION_ERROR` | 400 | Request body, parameter, or query parameter validation failed |
-| `INVALID_CREDENTIALS` | 401 | Invalid email or password |
-| `EMAIL_ALREADY_EXISTS` | 409 | User with this email already registered |
-| `AUTHENTICATION_REQUIRED` | 401 | Missing or invalid Authorization header |
-| `INVALID_TOKEN` | 401 | Expired or unparseable JWT token |
-| `FORBIDDEN` | 403 | Attempted to access a resource owned by another user |
-| `NO_FILE_PROVIDED` | 400 | Upload request missing `file` multipart field |
-| `INVALID_FILE_TYPE` | 400 | Extension or MIME type not supported |
-| `NO_INDEXABLE_TEXT` | 400 | Uploaded file contains no parseable text |
-| `DOCUMENT_NOT_FOUND` | 404 | Document ID does not exist |
-| `NO_RELEVANT_CONTENT` | 200 / 404 | Vector similarity search returned no results |
+| Error Code                | HTTP Status | Description                                                   |
+| ------------------------- | ----------- | ------------------------------------------------------------- |
+| `VALIDATION_ERROR`        | 400         | Request body, parameter, or query parameter validation failed |
+| `INVALID_CREDENTIALS`     | 401         | Invalid email or password                                     |
+| `EMAIL_ALREADY_EXISTS`    | 409         | User with this email already registered                       |
+| `AUTHENTICATION_REQUIRED` | 401         | Missing or invalid Authorization header                       |
+| `INVALID_TOKEN`           | 401         | Expired or unparseable JWT token                              |
+| `FORBIDDEN`               | 403         | Attempted to access a resource owned by another user          |
+| `NO_FILE_PROVIDED`        | 400         | Upload request missing `file` multipart field                 |
+| `INVALID_FILE_TYPE`       | 400         | Extension or MIME type not supported                          |
+| `NO_INDEXABLE_TEXT`       | 400         | Uploaded file contains no parseable text                      |
+| `DOCUMENT_NOT_FOUND`      | 404         | Document ID does not exist                                    |
+| `NO_RELEVANT_CONTENT`     | 200 / 404   | Vector similarity search returned no results                  |
 
 ---
 
@@ -71,6 +73,7 @@ Authorization: Bearer <your_jwt_token>
 ### 1. Authentication
 
 #### `POST /api/auth/register`
+
 - **Auth**: Public
 - **Validation Rules**: `name` (required, string, 2-100 chars), `email` (required, valid email), `password` (required, string, 6-128 chars)
 - **Request Body**:
@@ -100,6 +103,7 @@ Authorization: Bearer <your_jwt_token>
   ```
 
 #### `POST /api/auth/login`
+
 - **Auth**: Public
 - **Validation Rules**: `email` (required, valid email), `password` (required, string)
 - **Request Body**:
@@ -127,11 +131,33 @@ Authorization: Bearer <your_jwt_token>
   }
   ```
 
+#### `GET /api/auth/me`
+
+- **Auth**: Bearer Token (Required)
+- **Success Response (200)**:
+  ```json
+  {
+    "success": true,
+    "status": 200,
+    "message": "User profile retrieved successfully.",
+    "data": {
+      "id": "uuid",
+      "name": "Krishna Goyani",
+      "email": "krishna@example.com",
+      "created_at": "2026-10-01T05:00:00.000Z"
+    }
+  }
+  ```
+- **Error Responses**:
+  - `401 Unauthorized`: Token missing or invalid (`AUTHENTICATION_REQUIRED`, `INVALID_TOKEN`)
+  - `404 Not Found`: User does not exist (`USER_NOT_FOUND`)
+
 ---
 
 ### 2. Document Management
 
 #### `POST /api/documents/upload`
+
 - **Auth**: Bearer Token (Required)
 - **Content-Type**: `multipart/form-data`
 - **Form Data Field**: `file` (Required, PDF/DOCX/DOC/TXT, max 20MB)
@@ -157,6 +183,7 @@ Authorization: Bearer <your_jwt_token>
   ```
 
 #### `GET /api/documents`
+
 - **Auth**: Bearer Token (Required)
 - **Validation / Query Parameters**:
   - `page`: integer (min 1, default 1)
@@ -196,6 +223,7 @@ Authorization: Bearer <your_jwt_token>
   ```
 
 #### `GET /api/documents/:id`
+
 - **Auth**: Bearer Token (Required — ownership checked)
 - **Validation Rules**: `id` (required, valid UUID)
 - **Success Response (200)**:
@@ -219,7 +247,21 @@ Authorization: Bearer <your_jwt_token>
   }
   ```
 
+#### `GET /api/documents/:id/file`
+
+- **Auth**: Bearer Token (Required — ownership checked)
+- **Validation Rules**: `id` (required, valid UUID)
+- **Success Response (200)**: Raw Binary File Stream (`application/pdf`, `text/plain`, `application/vnd.openxmlformats-officedocument.wordprocessingml.document`)
+- **Headers Returned**:
+  - `Content-Type`: MIME type of document
+  - `Content-Disposition`: `inline; filename="original_name.pdf"`
+- **Error Responses**:
+  - `401 Unauthorized`: Token missing or invalid (`AUTHENTICATION_REQUIRED`, `INVALID_TOKEN`)
+  - `403 Forbidden`: Document owned by another user (`FORBIDDEN`)
+  - `404 Not Found`: Document ID or physical file on disk missing (`DOCUMENT_NOT_FOUND`)
+
 #### `DELETE /api/documents/:id`
+
 - **Auth**: Bearer Token (Required — ownership checked)
 - **Validation Rules**: `id` (required, valid UUID)
 - **Success Response (200)**:
@@ -232,11 +274,46 @@ Authorization: Bearer <your_jwt_token>
   }
   ```
 
----
-
 ### 3. RAG Q&A Querying
 
-#### `POST /api/documents/query` (Global Search Across All User Files)
+#### `GET /api/rag/history` (Retrieve Q&A Query History)
+
+- **Auth**: Bearer Token (Required)
+- **Validation / Query Parameters**:
+  - `document_id`: string UUID (optional. If passed, returns history for that document only. If omitted, returns global Q&A history where document_id is null)
+  - `page`: integer (min 1, default 1)
+  - `limit`: integer (min 1, max 100, default 20)
+
+- **Success Response (200)**:
+  ```json
+  {
+    "success": true,
+    "status": 200,
+    "message": "Query history retrieved successfully.",
+    "data": {
+      "history": [
+        {
+          "id": "uuid",
+          "user_id": "uuid",
+          "document_id": "uuid",
+          "document_name": "sales_report.pdf",
+          "question": "What was our Q3 revenue?",
+          "answer": "According to sales_report.pdf, Q3 revenue was $1.2M.",
+          "created_at": "2026-10-01T06:00:00.000Z"
+        }
+      ],
+      "pagination": {
+        "page": 1,
+        "limit": 20,
+        "total": 1,
+        "total_pages": 1
+      }
+    }
+  }
+  ```
+
+#### `POST /api/rag/query` (Global Search Across All User Files)
+
 - **Auth**: Bearer Token (Required)
 - **Validation Rules**: `question` (required, string, 1-1000 chars), `stream` (optional boolean, default `false`)
 - **Request Body**:
@@ -267,7 +344,8 @@ Authorization: Bearer <your_jwt_token>
   }
   ```
 
-#### `POST /api/documents/:id/query` (Single Document Query)
+#### `POST /api/rag/:id/query` (Single Document Query)
+
 - **Auth**: Bearer Token (Required — ownership checked)
 - **Validation Rules**: `id` (required, valid UUID), `question` (required, string, 1-1000 chars), `stream` (optional boolean, default `false`)
 - **Request Body**:
@@ -285,7 +363,7 @@ Authorization: Bearer <your_jwt_token>
     "message": "Query processed successfully.",
     "data": {
       "answer": "The key terms include...",
-      "sources": [ ... ]
+      "sources": []
     }
   }
   ```
@@ -294,11 +372,12 @@ Authorization: Bearer <your_jwt_token>
 
 ## Server-Sent Events (SSE) Streaming Protocol
 
-When `stream: true` is sent in `POST /api/documents/query` or `POST /api/documents/:id/query`:
+When `stream: true` is sent in `POST /api/rag/query` or `POST /api/rag/:id/query`:
 
 Response header: `Content-Type: text/event-stream`
 
 ### SSE Event Stream Sequence:
+
 ```
 event: metadata
 data: {"sources":[{"document_id":"uuid","document_name":"doc.pdf","page_number":1,"content":"...","similarity":0.85}]}
@@ -314,6 +393,7 @@ data: [DONE]
 ```
 
 If an error occurs mid-stream:
+
 ```
 event: error
 data: {"message":"Human-readable error description"}

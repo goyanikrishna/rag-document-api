@@ -17,24 +17,24 @@ async function queryDocument(req: Request, res: Response, next: NextFunction): P
     const userId = req.user!.id;
 
     if (stream === true) {
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
-      res.setHeader('X-Accel-Buffering', 'no');
-      res.flushHeaders();
-
-      // Handle client disconnect to avoid writing to a closed stream
-      let clientDisconnected = false;
-      req.on('close', () => {
-        clientDisconnected = true;
-      });
-
       try {
         const { stream: textStream, sources } = await ragService.queryDocumentStream(
           id,
           userId,
           question,
         );
+
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('X-Accel-Buffering', 'no');
+        res.flushHeaders();
+
+        // Handle client disconnect to avoid writing to a closed stream
+        let clientDisconnected = false;
+        req.on('close', () => {
+          clientDisconnected = true;
+        });
 
         res.write(`event: metadata\ndata: ${JSON.stringify({ sources })}\n\n`);
 
@@ -47,12 +47,19 @@ async function queryDocument(req: Request, res: Response, next: NextFunction): P
           res.write(`event: done\ndata: [DONE]\n\n`);
         }
       } catch (streamError: any) {
-        // Send error as SSE event — cannot use next() after headers are flushed
+        if (!res.headersSent) {
+          return next(streamError);
+        }
         res.write(
-          `event: error\ndata: ${JSON.stringify({ message: streamError.message || 'An error occurred while processing your query.' })}\n\n`,
+          `event: error\ndata: ${JSON.stringify({
+            message: streamError.message || 'An error occurred while processing your query.',
+            error_code: streamError.errorCode || 'TOO_MANY_REQUESTS',
+          })}\n\n`,
         );
       } finally {
-        res.end();
+        if (res.headersSent) {
+          res.end();
+        }
       }
       return;
     }
@@ -81,23 +88,23 @@ async function queryUserDocuments(req: Request, res: Response, next: NextFunctio
     const { question, stream } = req.body;
 
     if (stream === true) {
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
-      res.setHeader('X-Accel-Buffering', 'no');
-      res.flushHeaders();
-
-      // Handle client disconnect to avoid writing to a closed stream
-      let clientDisconnected = false;
-      req.on('close', () => {
-        clientDisconnected = true;
-      });
-
       try {
         const { stream: textStream, sources } = await ragService.queryUserDocumentsStream(
           userId,
           question,
         );
+
+        res.setHeader('Content-Type', 'text/event-stream');
+        res.setHeader('Cache-Control', 'no-cache');
+        res.setHeader('Connection', 'keep-alive');
+        res.setHeader('X-Accel-Buffering', 'no');
+        res.flushHeaders();
+
+        // Handle client disconnect to avoid writing to a closed stream
+        let clientDisconnected = false;
+        req.on('close', () => {
+          clientDisconnected = true;
+        });
 
         res.write(`event: metadata\ndata: ${JSON.stringify({ sources })}\n\n`);
 
@@ -110,12 +117,19 @@ async function queryUserDocuments(req: Request, res: Response, next: NextFunctio
           res.write(`event: done\ndata: [DONE]\n\n`);
         }
       } catch (streamError: any) {
-        // Send error as SSE event — cannot use next() after headers are flushed
+        if (!res.headersSent) {
+          return next(streamError);
+        }
         res.write(
-          `event: error\ndata: ${JSON.stringify({ message: streamError.message || 'An error occurred while processing your query.' })}\n\n`,
+          `event: error\ndata: ${JSON.stringify({
+            message: streamError.message || 'An error occurred while processing your query.',
+            error_code: streamError.errorCode || 'TOO_MANY_REQUESTS',
+          })}\n\n`,
         );
       } finally {
-        res.end();
+        if (res.headersSent) {
+          res.end();
+        }
       }
       return;
     }
@@ -134,7 +148,34 @@ async function queryUserDocuments(req: Request, res: Response, next: NextFunctio
   }
 }
 
+/**
+ * Retrieves paginated Q&A query history for the authenticated user.
+ * Supports filtering by optional query parameter document_id.
+ */
+async function getQueryHistory(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const userId = req.user!.id;
+    const { document_id, page, limit } = req.query;
+
+    const response = await ragService.getQueryHistory(userId, {
+      document_id: document_id ? String(document_id) : undefined,
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
+    });
+
+    res.status(200).json({
+      success: true,
+      status: 200,
+      message: SuccessMessages.historyRetrieved,
+      data: response,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export default {
   queryDocument,
   queryUserDocuments,
+  getQueryHistory,
 };

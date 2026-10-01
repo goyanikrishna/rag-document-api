@@ -27,10 +27,26 @@ async function generateEmbedding(text: string): Promise<number[]> {
     return result.embedding.values;
   } catch (error: any) {
     logger.error(`Embedding Provider Error: ${error.message}`);
+    const errorMsg = error?.message || '';
+    const isRateLimit =
+      errorMsg.includes('429') ||
+      errorMsg.includes('Too Many Requests') ||
+      errorMsg.includes('Quota exceeded') ||
+      errorMsg.includes('RESOURCE_EXHAUSTED') ||
+      error?.status === 429;
+
+    if (isRateLimit) {
+      throw new APIError(
+        'AI rate limit or free quota exceeded for embeddings. Please wait a few moments and try again.',
+        httpStatus.TOO_MANY_REQUESTS as number,
+        true,
+      );
+    }
+
     throw new APIError(
       `Embedding generation failed: ${error.message}`,
       httpStatus.BAD_GATEWAY as number,
-      false,
+      true,
     );
   }
 }
@@ -59,10 +75,26 @@ async function generateEmbeddings(texts: string[]): Promise<number[][]> {
     return batchResult.embeddings.map((emb) => emb.values);
   } catch (error: any) {
     logger.error(`Embedding Provider Batch Error: ${error.message}`);
+    const errorMsg = error?.message || '';
+    const isRateLimit =
+      errorMsg.includes('429') ||
+      errorMsg.includes('Too Many Requests') ||
+      errorMsg.includes('Quota exceeded') ||
+      errorMsg.includes('RESOURCE_EXHAUSTED') ||
+      error?.status === 429;
+
+    if (isRateLimit) {
+      throw new APIError(
+        'AI rate limit or free quota exceeded for embeddings. Please wait a few moments and try again.',
+        httpStatus.TOO_MANY_REQUESTS as number,
+        true,
+      );
+    }
+
     throw new APIError(
       `Batch embedding generation failed: ${error.message}`,
       httpStatus.BAD_GATEWAY as number,
-      false,
+      true,
     );
   }
 }

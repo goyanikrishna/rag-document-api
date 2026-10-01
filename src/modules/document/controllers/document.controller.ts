@@ -148,9 +148,34 @@ async function deleteDocument(req: Request, res: Response, next: NextFunction): 
   }
 }
 
+/**
+ * Serves the physical file binary for inline viewing or downloading.
+ * Enforces ownership — throws 403 if the document does not belong to the requesting user.
+ */
+async function getDocumentFile(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.id;
+
+    const { filePath, mimeType, originalName } = await documentService.getDocumentFile(id, userId);
+
+    res.setHeader('Content-Type', mimeType);
+    res.setHeader('Content-Disposition', `inline; filename="${encodeURIComponent(originalName)}"`);
+
+    res.sendFile(filePath, (err) => {
+      if (err && !res.headersSent) {
+        next(err);
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export default {
   uploadDocument,
   getDocuments,
   getDocument,
+  getDocumentFile,
   deleteDocument,
 };

@@ -20,6 +20,21 @@ async function findByEmail(email: string): Promise<User | null> {
   }
 }
 
+async function findById(id: string): Promise<User | null> {
+  try {
+    return await prisma.user.findUnique({
+      where: { id },
+    });
+  } catch (error: any) {
+    logger.error(`Database Error finding user by id: ${error.message}`);
+    throw new APIError(
+      `Failed to fetch user: ${error.message}`,
+      httpStatus.INTERNAL_SERVER_ERROR as number,
+      false,
+    );
+  }
+}
+
 async function create(data: ICreateUserInput): Promise<User> {
   try {
     return await prisma.user.create({
@@ -41,5 +56,6 @@ async function create(data: ICreateUserInput): Promise<User> {
 
 export default {
   findByEmail,
+  findById,
   create,
 };

@@ -20,7 +20,7 @@ const options: swaggerJsdoc.Options = {
     },
     servers: [
       {
-        url: `http://localhost:${env.PORT || 3000}`,
+        url: `http://localhost:${env.PORT || 8000}`,
         description: 'Local Development Server',
       },
     ],
@@ -74,6 +74,27 @@ const options: swaggerJsdoc.Options = {
                   },
                 },
                 token: { type: 'string', example: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...' },
+              },
+            },
+          },
+        },
+        UserProfileResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            status: { type: 'integer', example: 200 },
+            message: { type: 'string', example: 'User profile retrieved successfully.' },
+            data: {
+              type: 'object',
+              properties: {
+                id: {
+                  type: 'string',
+                  format: 'uuid',
+                  example: 'c39a82e1-4567-4e32-a1b2-123456789abc',
+                },
+                name: { type: 'string', example: 'Krishna Goyani' },
+                email: { type: 'string', example: 'krishna@example.com' },
+                created_at: { type: 'string', format: 'date-time' },
               },
             },
           },
@@ -204,6 +225,48 @@ const options: swaggerJsdoc.Options = {
             },
           },
         },
+        QueryHistoryItem: {
+          type: 'object',
+          properties: {
+            id: { type: 'string', format: 'uuid', example: 'd49a82e1-4567-4e32-a1b2-123456789abc' },
+            user_id: {
+              type: 'string',
+              format: 'uuid',
+              example: 'a1b2c3d4-5678-90ab-cdef-1234567890ab',
+            },
+            document_id: {
+              type: 'string',
+              format: 'uuid',
+              nullable: true,
+              example: 'c39a82e1-4567-4e32-a1b2-123456789abc',
+            },
+            document_name: { type: 'string', nullable: true, example: 'sales_report_2024.pdf' },
+            question: { type: 'string', example: 'What was our Q3 revenue?' },
+            answer: {
+              type: 'string',
+              example: 'According to sales_report_2024.pdf, revenue was $1.2M.',
+            },
+            created_at: { type: 'string', format: 'date-time' },
+          },
+        },
+        QueryHistoryResponse: {
+          type: 'object',
+          properties: {
+            success: { type: 'boolean', example: true },
+            status: { type: 'integer', example: 200 },
+            message: { type: 'string', example: 'Query history retrieved successfully.' },
+            data: {
+              type: 'object',
+              properties: {
+                history: {
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/QueryHistoryItem' },
+                },
+                pagination: { $ref: '#/components/schemas/PaginationMeta' },
+              },
+            },
+          },
+        },
         ErrorResponse: {
           type: 'object',
           properties: {
@@ -283,6 +346,40 @@ const options: swaggerJsdoc.Options = {
             },
             '401': {
               description: 'Invalid credentials.',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/api/auth/me': {
+        get: {
+          summary: 'Get current user profile',
+          description: 'Retrieves profile information for the currently authenticated user.',
+          tags: ['Authentication'],
+          security: [{ BearerAuth: [] }],
+          responses: {
+            '200': {
+              description: 'User profile retrieved successfully.',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/UserProfileResponse' },
+                },
+              },
+            },
+            '401': {
+              description: 'Authentication required or invalid token.',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/ErrorResponse' },
+                },
+              },
+            },
+            '404': {
+              description: 'User not found.',
               content: {
                 'application/json': {
                   schema: { $ref: '#/components/schemas/ErrorResponse' },
@@ -397,7 +494,49 @@ const options: swaggerJsdoc.Options = {
           },
         },
       },
-      '/api/documents/query': {
+      '/api/rag/history': {
+        get: {
+          summary: 'Get user Q&A query history',
+          description:
+            'Retrieves paginated history of questions and generated AI answers for the authenticated user. Optionally filter by document_id.',
+          tags: ['RAG Query'],
+          security: [{ BearerAuth: [] }],
+          parameters: [
+            {
+              name: 'document_id',
+              in: 'query',
+              required: false,
+              schema: { type: 'string', format: 'uuid' },
+              description: 'Filter history by specific document UUID',
+            },
+            {
+              name: 'page',
+              in: 'query',
+              required: false,
+              schema: { type: 'integer', default: 1 },
+              description: 'Page number (default 1)',
+            },
+            {
+              name: 'limit',
+              in: 'query',
+              required: false,
+              schema: { type: 'integer', default: 20 },
+              description: 'Number of items per page (default 20, max 100)',
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'Paginated Q&A chat history.',
+              content: {
+                'application/json': {
+                  schema: { $ref: '#/components/schemas/QueryHistoryResponse' },
+                },
+              },
+            },
+          },
+        },
+      },
+      '/api/rag/query': {
         post: {
           summary: 'Multi-Document Query (Search across ALL user files)',
           description:
@@ -425,7 +564,7 @@ const options: swaggerJsdoc.Options = {
           },
         },
       },
-      '/api/documents/{id}/query': {
+      '/api/rag/{id}/query': {
         post: {
           summary: 'Query a single specific document',
           description: 'Queries a specific document by its UUID.',
@@ -456,6 +595,43 @@ const options: swaggerJsdoc.Options = {
                   schema: { $ref: '#/components/schemas/QueryResponse' },
                 },
               },
+            },
+          },
+        },
+      },
+      '/api/documents/{id}/file': {
+        get: {
+          summary: 'Stream or download raw document file',
+          description:
+            'Serves the raw physical file binary (PDF, DOCX, TXT) for inline viewing or downloading.',
+          tags: ['Documents'],
+          security: [{ BearerAuth: [] }],
+          parameters: [
+            {
+              name: 'id',
+              in: 'path',
+              required: true,
+              schema: { type: 'string', format: 'uuid' },
+              description: 'Document UUID',
+            },
+          ],
+          responses: {
+            '200': {
+              description: 'Physical document binary stream.',
+              content: {
+                'application/pdf': {},
+                'text/plain': {},
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document': {},
+              },
+            },
+            '401': {
+              description: 'Authentication required or invalid token.',
+            },
+            '403': {
+              description: 'Forbidden (Not document owner).',
+            },
+            '404': {
+              description: 'Document or file not found.',
             },
           },
         },

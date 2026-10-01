@@ -5,11 +5,39 @@ import { env } from '@/config/env';
 import { logger } from '@/config/logger';
 // common
 import APIError from '@/common/errors/api-error';
+import { ErrorCodes } from '@/common/constants/error-codes';
 // interfaces
 import { IChatMessage, ILLMResponse } from './llm-provider.interface';
 
 const genAI = new GoogleGenerativeAI(env.GEMINI_API_KEY);
 const modelName = env.GEMINI_MODEL;
+
+function handleGeminiError(error: any, operation: string): never {
+  logger.error(`Gemini LLM API ${operation} Error: ${error.message}`);
+  const errorMsg = error?.message || '';
+  const isRateLimit =
+    errorMsg.includes('429') ||
+    errorMsg.includes('Too Many Requests') ||
+    errorMsg.includes('Quota exceeded') ||
+    errorMsg.includes('RESOURCE_EXHAUSTED') ||
+    error?.status === 429;
+
+  if (isRateLimit) {
+    throw new APIError(
+      'AI quota or rate limit exceeded. Please wait a few moments and try again.',
+      httpStatus.TOO_MANY_REQUESTS as number,
+      true,
+      ErrorCodes.TOO_MANY_REQUESTS,
+    );
+  }
+
+  throw new APIError(
+    `AI Generation failed: ${error.message}`,
+    httpStatus.BAD_GATEWAY as number,
+    true,
+    ErrorCodes.INTERNAL_SERVER_ERROR,
+  );
+}
 
 /**
  * Generates a standard (non-streaming) text response.
@@ -33,17 +61,12 @@ async function generateResponse(prompt: string, systemInstruction?: string): Pro
 
     return { text };
   } catch (error: any) {
-    logger.error(`Gemini LLM API Error: ${error.message}`);
-    throw new APIError(
-      `Gemini Generation failed: ${error.message}`,
-      httpStatus.BAD_GATEWAY as number,
-      false,
-    );
+    handleGeminiError(error, 'Generation');
   }
 }
 
 /**
- * Generates a chat response given a history of messages. (FOR NOW N0T IN USE)
+ * Generates a chat response given a history of messages. (FOR NOW NOT IN USE)
  */
 async function generateChatResponse(
   messages: IChatMessage[],
@@ -57,7 +80,6 @@ async function generateChatResponse(
         : undefined,
     });
 
-    // Map our message formats to Gemini's history structure (only user and model roles are supported by history)
     const history = messages.slice(0, -1).map((msg) => ({
       role: msg.role === 'model' ? 'model' : 'user',
       parts: [{ text: msg.content }],
@@ -76,12 +98,7 @@ async function generateChatResponse(
 
     return { text };
   } catch (error: any) {
-    logger.error(`Gemini LLM Chat Error: ${error.message}`);
-    throw new APIError(
-      `Gemini Chat Generation failed: ${error.message}`,
-      httpStatus.BAD_GATEWAY as number,
-      false,
-    );
+    handleGeminiError(error, 'Chat');
   }
 }
 
@@ -103,22 +120,21 @@ async function generateResponseStream(
     const resultStream = await model.generateContentStream(prompt);
 
     async function* makeGenerator() {
-      for await (const chunk of resultStream.stream) {
-        const text = chunk.text();
-        if (text) {
-          yield text;
+      try {
+        for await (const chunk of resultStream.stream) {
+          const text = chunk.text();
+          if (text) {
+            yield text;
+          }
         }
+      } catch (streamIterError: any) {
+        handleGeminiError(streamIterError, 'Streaming Chunk');
       }
     }
 
     return makeGenerator();
   } catch (error: any) {
-    logger.error(`Gemini LLM API Streaming Error: ${error.message}`);
-    throw new APIError(
-      `Gemini Streaming Generation failed: ${error.message}`,
-      httpStatus.BAD_GATEWAY as number,
-      false,
-    );
+    handleGeminiError(error, 'Streaming');
   }
 }
 

@@ -31,7 +31,23 @@ async function login(req: Request, res: Response, next: NextFunction): Promise<v
   }
 }
 
+async function getMe(req: Request, res: Response, next: NextFunction): Promise<void> {
+  try {
+    const userId = req.user!.id;
+    const result = await authService.getMe(userId);
+    res.status(httpStatus.OK as number).json({
+      success: true,
+      status: httpStatus.OK,
+      message: SuccessMessages.profileRetrieved,
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export default {
   register,
   login,
+  getMe,
 };

@@ -2,6 +2,7 @@ export const ErrMessages = {
   // ─── Authentication ───────────────────────────────────────────────────────
   invalidCredentials: 'Invalid email or password.',
   emailAlreadyExists: 'An account with this email address already exists.',
+  userNotFound: 'User not found.',
 
   // ─── Authorization ────────────────────────────────────────────────────────
   documentAccessForbidden: 'You do not have permission to access this document.',
@@ -30,6 +31,7 @@ export const SuccessMessages = {
   // ─── Auth ─────────────────────────────────────────────────────────────────
   userRegistered: 'User registered successfully.',
   loginSuccessful: 'Login successful.',
+  profileRetrieved: 'User profile retrieved successfully.',
 
   // ─── Document ────────────────────────────────────────────────────────────
   documentUploaded: 'Document uploaded and processed successfully.',
@@ -39,4 +41,5 @@ export const SuccessMessages = {
 
   // ─── RAG ─────────────────────────────────────────────────────────────────
   queryProcessed: 'Query processed successfully.',
+  historyRetrieved: 'Query history retrieved successfully.',
 };

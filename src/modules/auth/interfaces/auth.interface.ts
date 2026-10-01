@@ -24,3 +24,10 @@ export interface IAuthResponse {
   };
   token: string;
 }
+
+export interface IUserProfileResponse {
+  id: string;
+  name: string;
+  email: string;
+  created_at: Date;
+}
