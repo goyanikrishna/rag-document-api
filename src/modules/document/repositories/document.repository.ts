@@ -11,6 +11,8 @@ import APIError from '@/common/errors/api-error';
 import {
   ICreateDocumentInput,
   ICreateChunkInput,
+  IDocumentQueryParams,
+  IPaginatedResult,
 } from '@/modules/document/interfaces/document.interface';
 
 /**
@@ -20,6 +22,7 @@ async function create(data: ICreateDocumentInput): Promise<Document> {
   try {
     return await prisma.document.create({
       data: {
+        userId: data.userId || null,
         originalName: data.originalName,
         filename: data.filename,
         mimeType: data.mimeType,
@@ -70,13 +73,61 @@ async function createChunksWithEmbeddings(chunks: ICreateChunkInput[]): Promise<
 }
 
 /**
- * Retrieves all documents.
+ * Retrieves documents belonging to a user with pagination, search, and sorting.
  */
-async function findAll(): Promise<Document[]> {
+async function findAll(
+  userId?: string,
+  params: IDocumentQueryParams = {},
+): Promise<IPaginatedResult<Document>> {
   try {
-    return await prisma.document.findMany({
-      orderBy: { uploadedAt: 'desc' },
-    });
+    const page = Math.max(1, Number(params.page) || 1);
+    const limit = Math.max(1, Math.min(100, Number(params.limit) || 20));
+    const skip = (page - 1) * limit;
+
+    const search = params.search?.trim();
+
+    // Map snake_case query params to Prisma model property names
+    const sortFieldMap: Record<string, string> = {
+      uploaded_at: 'uploadedAt',
+      original_name: 'originalName',
+      size: 'size',
+    };
+    const sortField = sortFieldMap[params.sort || 'uploaded_at'] || 'uploadedAt';
+    const sortOrder = params.order || 'desc';
+
+    const whereCondition: any = {
+      ...(userId && { userId }),
+      ...(search && {
+        originalName: {
+          contains: search,
+          mode: 'insensitive',
+        },
+      }),
+    };
+
+    const [items, total] = await prisma.$transaction([
+      prisma.document.findMany({
+        where: whereCondition,
+        orderBy: { [sortField]: sortOrder },
+        skip,
+        take: limit,
+      }),
+      prisma.document.count({
+        where: whereCondition,
+      }),
+    ]);
+
+    const totalPages = Math.ceil(total / limit) || 1;
+
+    return {
+      items,
+      pagination: {
+        page,
+        limit,
+        total,
+        total_pages: totalPages,
+      },
+    };
   } catch (error: any) {
     logger.error(`Database Error fetching documents: ${error.message}`);
     throw new APIError(
@@ -123,10 +174,39 @@ async function deleteDocument(id: string): Promise<void> {
   }
 }
 
+/**
+ * Updates the processing status of a document.
+ */
+async function updateStatus(
+  id: string,
+  status: string,
+  processedAt?: Date | null,
+  errorMessage?: string | null,
+): Promise<Document> {
+  try {
+    return await prisma.document.update({
+      where: { id },
+      data: {
+        status,
+        ...(processedAt !== undefined && { processedAt }),
+        ...(errorMessage !== undefined && { errorMessage }),
+      },
+    });
+  } catch (error: any) {
+    logger.error(`Database Error updating document status ${id}: ${error.message}`);
+    throw new APIError(
+      `Failed to update document status: ${error.message}`,
+      httpStatus.INTERNAL_SERVER_ERROR as number,
+      false,
+    );
+  }
+}
+
 export default {
   create,
   createChunksWithEmbeddings,
   findAll,
   findById,
   deleteDocument,
+  updateStatus,
 };

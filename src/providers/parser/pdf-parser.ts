@@ -33,7 +33,7 @@ async function parse(fileBuffer: Buffer): Promise<IParsedDocument> {
         const pageNumber = pageData.pageIndex + 1;
         pages.push({
           content: text,
-          pageNumber,
+          page_number: pageNumber,
         });
 
         return text;
@@ -43,7 +43,7 @@ async function parse(fileBuffer: Buffer): Promise<IParsedDocument> {
     const result = await pdf(fileBuffer, options);
 
     // Ensure pages are ordered sequentially
-    pages.sort((a, b) => a.pageNumber - b.pageNumber);
+    pages.sort((a, b) => a.page_number - b.page_number);
 
     return {
       text: result.text,

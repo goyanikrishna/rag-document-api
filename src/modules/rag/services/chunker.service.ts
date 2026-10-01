@@ -34,8 +34,8 @@ function splitPageText(
     return [
       {
         content: cleanedText,
-        pageNumber,
-        chunkIndex: startingChunkIndex,
+        page_number: pageNumber,
+        chunk_index: startingChunkIndex,
       },
     ];
   }
@@ -69,8 +69,8 @@ function splitPageText(
     if (chunkContent.length > 0) {
       chunks.push({
         content: chunkContent,
-        pageNumber,
-        chunkIndex: currentChunkIndex++,
+        page_number: pageNumber,
+        chunk_index: currentChunkIndex++,
       });
     }
 

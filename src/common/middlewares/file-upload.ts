@@ -6,6 +6,7 @@ import httpStatus from 'http-status';
 import { env, UPLOAD_DIR } from '@/config/env';
 // common
 import APIError from '@/common/errors/api-error';
+import { AllowedMimeTypes, AllowedFileExtensions } from '@/common/enums/file-type.enum';
 
 // Ensure the local uploads directory exists
 if (!fs.existsSync(UPLOAD_DIR)) {
@@ -24,20 +25,17 @@ const storage = multer.diskStorage({
 });
 
 const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  const allowedMimetypes = [
-    'application/pdf',
-    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-  ];
+  const allowedMimetypes: string[] = Object.values(AllowedMimeTypes);
+  const allowedExtensions: string[] = Object.values(AllowedFileExtensions);
 
   const ext = path.extname(file.originalname).toLowerCase();
-  const allowedExtensions = ['.pdf', '.docx'];
 
-  if (allowedMimetypes.includes(file.mimetype) && allowedExtensions.includes(ext)) {
+  if (allowedMimetypes.includes(file.mimetype) || allowedExtensions.includes(ext)) {
     cb(null, true);
   } else {
     cb(
       new APIError(
-        `Invalid file type: "${file.originalname}". Only PDF (.pdf) and DOCX (.docx) documents are allowed.`,
+        `Invalid file type: "${file.originalname}". Only PDF (.pdf), DOCX (.docx, .doc), and Text (.txt) documents are allowed.`,
         httpStatus.BAD_REQUEST as number,
         true,
       ),

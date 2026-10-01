@@ -3,21 +3,39 @@ datasource db {
   extensions = [pgvector(map: "vector")]
 }
 
-
 generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["postgresqlExtensions"]
 }
 
+model User {
+  id        String     @id @default(uuid()) @db.Uuid
+  email     String     @unique
+  name      String
+  password  String
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+  documents Document[]
+
+  @@map("users")
+}
+
 model Document {
   id           String          @id @default(uuid()) @db.Uuid
+  userId       String?         @map("user_id") @db.Uuid
   originalName String          @map("original_name")
   filename     String          @unique
   mimeType     String          @map("mime_type")
   size         Int
+  status       String          @default("PENDING")
+  processedAt  DateTime?       @map("processed_at")
+  errorMessage String?         @map("error_message")
   uploadedAt   DateTime        @default(now()) @map("uploaded_at")
+  user         User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
   chunks       DocumentChunk[]
 
+  @@index([userId])
+  @@index([status])
   @@map("documents")
 }
 

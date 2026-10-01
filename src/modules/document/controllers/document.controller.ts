@@ -3,30 +3,43 @@ import httpStatus from 'http-status';
 // common
 import APIError from '@/common/errors/api-error';
 import { ErrMessages, SuccessMessages } from '@/common/constants/app-messages';
+import { ErrorCodes } from '@/common/constants/error-codes';
 // modules
 import documentService from '@/modules/document/services/document.service';
 
 /**
- * Handles document uploading and triggers vector parsing/ingestion.
+ * Handles document uploading and triggers the vector parsing/ingestion pipeline.
  */
 async function uploadDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     if (!req.file) {
-      throw new APIError(ErrMessages.noFileProvided, httpStatus.BAD_REQUEST as number, true);
+      throw new APIError(
+        ErrMessages.noFileProvided,
+        httpStatus.BAD_REQUEST as number,
+        true,
+        ErrorCodes.NO_FILE_PROVIDED,
+      );
     }
 
-    const document = await documentService.uploadAndProcess(req.file);
+    // req.user is guaranteed by authenticateUser middleware
+    const userId = req.user!.id;
+    const document = await documentService.uploadAndProcess(req.file, userId);
 
     res.status(201).json({
+      success: true,
       status: 201,
-      message: 'Success',
+      message: SuccessMessages.documentUploaded,
       data: {
         id: document.id,
-        originalName: document.originalName,
+        user_id: document.userId,
+        original_name: document.originalName,
         filename: document.filename,
-        mimeType: document.mimeType,
+        mime_type: document.mimeType,
         size: document.size,
-        uploadedAt: document.uploadedAt,
+        status: document.status,
+        processed_at: document.processedAt,
+        error_message: document.errorMessage,
+        uploaded_at: document.uploadedAt,
       },
     });
   } catch (error) {
@@ -35,25 +48,43 @@ async function uploadDocument(req: Request, res: Response, next: NextFunction): 
 }
 
 /**
- * Retrieves metadata list of all uploaded documents.
+ * Retrieves metadata list of all documents belonging to the authenticated user with pagination, search, and sorting.
  */
 async function getDocuments(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
-    const documents = await documentService.getAllDocuments();
+    // req.user is guaranteed by authenticateUser middleware
+    const userId = req.user!.id;
+    const { page, limit, search, sort, order } = req.query;
 
-    const mappedDocs = documents.map((doc) => ({
+    const result = await documentService.getAllDocuments(userId, {
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
+      search: search ? String(search) : undefined,
+      sort: sort ? (String(sort) as any) : undefined,
+      order: order ? (String(order) as any) : undefined,
+    });
+
+    const mappedDocs = result.items.map((doc) => ({
       id: doc.id,
-      originalName: doc.originalName,
+      user_id: doc.userId,
+      original_name: doc.originalName,
       filename: doc.filename,
-      mimeType: doc.mimeType,
+      mime_type: doc.mimeType,
       size: doc.size,
-      uploadedAt: doc.uploadedAt,
+      status: doc.status,
+      processed_at: doc.processedAt,
+      error_message: doc.errorMessage,
+      uploaded_at: doc.uploadedAt,
     }));
 
     res.status(200).json({
+      success: true,
       status: 200,
-      message: 'Success',
-      data: mappedDocs,
+      message: SuccessMessages.documentsRetrieved,
+      data: {
+        documents: mappedDocs,
+        pagination: result.pagination,
+      },
     });
   } catch (error) {
     next(error);
@@ -62,22 +93,31 @@ async function getDocuments(req: Request, res: Response, next: NextFunction): Pr
 
 /**
  * Retrieves metadata of a single document by ID.
+ * Enforces that the document belongs to the authenticated user.
  */
 async function getDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params;
-    const document = await documentService.getDocumentById(id);
+    const userId = req.user!.id;
+
+    // Ownership is enforced inside getDocumentById (throws 403 if not owner)
+    const document = await documentService.getDocumentById(id, userId);
 
     res.status(200).json({
+      success: true,
       status: 200,
-      message: 'Success',
+      message: SuccessMessages.documentRetrieved,
       data: {
         id: document.id,
-        originalName: document.originalName,
+        user_id: document.userId,
+        original_name: document.originalName,
         filename: document.filename,
-        mimeType: document.mimeType,
+        mime_type: document.mimeType,
         size: document.size,
-        uploadedAt: document.uploadedAt,
+        status: document.status,
+        processed_at: document.processedAt,
+        error_message: document.errorMessage,
+        uploaded_at: document.uploadedAt,
       },
     });
   } catch (error) {
@@ -87,18 +127,21 @@ async function getDocument(req: Request, res: Response, next: NextFunction): Pro
 
 /**
  * Deletes a document by ID and removes its local file.
+ * Enforces that the document belongs to the authenticated user.
  */
 async function deleteDocument(req: Request, res: Response, next: NextFunction): Promise<void> {
   try {
     const { id } = req.params;
-    await documentService.deleteDocument(id);
+    const userId = req.user!.id;
+
+    // Ownership is enforced inside deleteDocument (throws 403 if not owner)
+    await documentService.deleteDocument(id, userId);
 
     res.status(200).json({
+      success: true,
       status: 200,
-      message: 'Success',
-      data: {
-        message: SuccessMessages.documentDeleted,
-      },
+      message: SuccessMessages.documentDeleted,
+      data: null,
     });
   } catch (error) {
     next(error);

@@ -1,6 +1,6 @@
 export interface IParsedPage {
   content: string;
-  pageNumber: number;
+  page_number: number;
 }
 
 export interface IParsedDocument {

@@ -17,6 +17,10 @@ const envSchema = Joi.object({
   CHUNK_SIZE: Joi.number().integer().default(1000),
   CHUNK_OVERLAP: Joi.number().integer().default(200),
   TOP_K_RESULTS: Joi.number().integer().default(5),
+  MIN_SIMILARITY_THRESHOLD: Joi.number().min(0).max(1).default(0.55),
+  // JWT_SECRET is required — no default is allowed to prevent insecure deployments.
+  JWT_SECRET: Joi.string().min(32).required(),
+  JWT_EXPIRES_IN: Joi.string().default('7d'),
 }).unknown(true);
 
 const { error, value: envVars } = envSchema.validate(process.env, { abortEarly: false });
@@ -39,6 +43,9 @@ export const env = {
   CHUNK_SIZE: envVars.CHUNK_SIZE as number,
   CHUNK_OVERLAP: envVars.CHUNK_OVERLAP as number,
   TOP_K_RESULTS: envVars.TOP_K_RESULTS as number,
+  MIN_SIMILARITY_THRESHOLD: envVars.MIN_SIMILARITY_THRESHOLD as number,
+  JWT_SECRET: envVars.JWT_SECRET as string,
+  JWT_EXPIRES_IN: envVars.JWT_EXPIRES_IN as string,
 };
 
 // Resolve upload path to an absolute path

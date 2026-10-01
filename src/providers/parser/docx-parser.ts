@@ -20,7 +20,7 @@ async function parse(fileBuffer: Buffer): Promise<IParsedDocument> {
     const pages: IParsedPage[] = [
       {
         content: text,
-        pageNumber: 1,
+        page_number: 1,
       },
     ];
 

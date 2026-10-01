@@ -7,8 +7,15 @@ const ragParams = {
       id: Joi.string().uuid().required(),
     }),
     body: Joi.object({
-      question: Joi.string().trim().min(1).max(500).required(),
-      stream: Joi.boolean().optional(),
+      question: Joi.string().trim().min(1).max(1000).required(),
+      stream: Joi.boolean().default(false),
+    }),
+  },
+  // POST /api/documents/query
+  queryUserDocuments: {
+    body: Joi.object({
+      question: Joi.string().trim().min(1).max(1000).required(),
+      stream: Joi.boolean().default(false),
     }),
   },
 };
