@@ -26,8 +26,6 @@ export interface IQueryResponse {
 export interface IQueryHistoryItemResponse {
   id: string;
   user_id: string;
-  document_id: string | null;
-  document_name: string | null;
   question: string;
   answer: string;
   created_at: Date;

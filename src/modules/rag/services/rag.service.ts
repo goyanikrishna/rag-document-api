@@ -166,7 +166,8 @@ async function queryDocument(
       error?.message?.includes('rate limit')
     ) {
       const rateLimitAnswer =
-        error?.message || 'AI quota or rate limit exceeded. Please wait a few moments and try again.';
+        error?.message ||
+        'AI quota or rate limit exceeded. Please wait a few moments and try again.';
       await queryHistoryRepository
         .create({ userId, documentId, question, answer: rateLimitAnswer })
         .catch(() => {});
@@ -233,7 +234,10 @@ async function queryDocumentStream(
     }
 
     const { prompt } = buildPrompt(matches, question, document.originalName);
-    const rawStream = await llmProvider.generateResponseStream(prompt, SINGLE_DOC_SYSTEM_INSTRUCTION);
+    const rawStream = await llmProvider.generateResponseStream(
+      prompt,
+      SINGLE_DOC_SYSTEM_INSTRUCTION,
+    );
 
     async function* historyTrackingStream() {
       let fullAnswer = '';
@@ -282,7 +286,8 @@ async function queryDocumentStream(
       error?.message?.includes('rate limit')
     ) {
       const rateLimitAnswer =
-        error?.message || 'AI quota or rate limit exceeded. Please wait a few moments and try again.';
+        error?.message ||
+        'AI quota or rate limit exceeded. Please wait a few moments and try again.';
       await queryHistoryRepository
         .create({ userId, documentId, question, answer: rateLimitAnswer })
         .catch(() => {});
@@ -346,7 +351,8 @@ async function queryUserDocuments(userId: string, question: string): Promise<IQu
       error?.message?.includes('rate limit')
     ) {
       const rateLimitAnswer =
-        error?.message || 'AI quota or rate limit exceeded. Please wait a few moments and try again.';
+        error?.message ||
+        'AI quota or rate limit exceeded. Please wait a few moments and try again.';
       await queryHistoryRepository
         .create({ userId, documentId: null, question, answer: rateLimitAnswer })
         .catch(() => {});
@@ -386,7 +392,10 @@ async function queryUserDocumentsStream(
     }
 
     const { prompt } = buildPrompt(matches, question);
-    const rawStream = await llmProvider.generateResponseStream(prompt, MULTI_DOC_SYSTEM_INSTRUCTION);
+    const rawStream = await llmProvider.generateResponseStream(
+      prompt,
+      MULTI_DOC_SYSTEM_INSTRUCTION,
+    );
 
     async function* historyTrackingStream() {
       let fullAnswer = '';
@@ -441,7 +450,8 @@ async function queryUserDocumentsStream(
       error?.message?.includes('rate limit')
     ) {
       const rateLimitAnswer =
-        error?.message || 'AI quota or rate limit exceeded. Please wait a few moments and try again.';
+        error?.message ||
+        'AI quota or rate limit exceeded. Please wait a few moments and try again.';
       await queryHistoryRepository
         .create({ userId, documentId: null, question, answer: rateLimitAnswer })
         .catch(() => {});
@@ -487,8 +497,6 @@ async function getQueryHistory(
   const history: IQueryHistoryItemResponse[] = result.items.map((item) => ({
     id: item.id,
     user_id: item.userId,
-    document_id: item.documentId,
-    document_name: item.document?.originalName || null,
     question: item.question,
     answer: item.answer,
     created_at: item.createdAt,

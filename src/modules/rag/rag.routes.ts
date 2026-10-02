@@ -21,11 +21,7 @@ const queryLimiter = rateLimit({
 });
 
 // GET /api/documents/history - Retrieve Q&A query history for authenticated user (supports document_id, page, limit)
-router.get(
-  '/history',
-  validate(ragParams.getQueryHistory),
-  ragController.getQueryHistory,
-);
+router.get('/history', validate(ragParams.getQueryHistory), ragController.getQueryHistory);
 
 // POST /api/documents/query - Query across ALL documents belonging to the authenticated user
 router.post(
@@ -44,4 +40,3 @@ router.post(
 );
 
 export default router;
-

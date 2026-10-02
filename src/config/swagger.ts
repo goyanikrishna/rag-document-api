@@ -234,13 +234,6 @@ const options: swaggerJsdoc.Options = {
               format: 'uuid',
               example: 'a1b2c3d4-5678-90ab-cdef-1234567890ab',
             },
-            document_id: {
-              type: 'string',
-              format: 'uuid',
-              nullable: true,
-              example: 'c39a82e1-4567-4e32-a1b2-123456789abc',
-            },
-            document_name: { type: 'string', nullable: true, example: 'sales_report_2024.pdf' },
             question: { type: 'string', example: 'What was our Q3 revenue?' },
             answer: {
               type: 'string',

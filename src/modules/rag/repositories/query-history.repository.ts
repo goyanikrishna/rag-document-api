@@ -40,14 +40,6 @@ async function findByUser(userId: string, filter: IQueryHistoryFilter = {}) {
       orderBy: { createdAt: 'desc' },
       skip,
       take: limit,
-      include: {
-        document: {
-          select: {
-            id: true,
-            originalName: true,
-          },
-        },
-      },
     }),
     prisma.queryHistory.count({ where }),
   ]);

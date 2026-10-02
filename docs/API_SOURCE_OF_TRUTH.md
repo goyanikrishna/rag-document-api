@@ -295,8 +295,6 @@ Authorization: Bearer <your_jwt_token>
         {
           "id": "uuid",
           "user_id": "uuid",
-          "document_id": "uuid",
-          "document_name": "sales_report.pdf",
           "question": "What was our Q3 revenue?",
           "answer": "According to sales_report.pdf, Q3 revenue was $1.2M.",
           "created_at": "2026-10-01T06:00:00.000Z"

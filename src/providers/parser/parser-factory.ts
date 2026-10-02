@@ -44,4 +44,3 @@ function getParser(mimeType: string, originalName?: string): IDocumentParser {
 }
 
 export default { getParser };
-

@@ -55,5 +55,3 @@ async function parse(fileBuffer: Buffer): Promise<IParsedDocument> {
 }
 
 export default { parse };
-
-
